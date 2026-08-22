@@ -25,7 +25,12 @@ cd php-200-steps
 node server.js
 ```
 
-ブラウザで http://localhost:3941 を開く。
+起動するとターミナルにURLが表示されるので、ブラウザで開く（デフォルトは http://localhost:3941 ）。
+ポートは環境変数PORTで変更できる。
+
+```bash
+PORT=8080 node server.js
+```
 
 ## カリキュラム
 
