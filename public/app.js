@@ -279,26 +279,13 @@
     elStdoutBlock.hidden = true;
     elStderrBlock.hidden = true;
 
-    fetch("/api/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: getCode() }),
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (result) {
-        if (result.error) {
-          elOutputStatus.textContent = result.error;
-          elOutputStatus.className = "status-err";
-          return;
-        }
+    // ブラウザ内のphp-wasm（PHP 8.5）で実行する（ローカルでもCloudflare上でも同じ挙動）
+    PhpRunner.run(getCode(), {
+      onResult: function (result) {
+        setRunning(false);
         showOutput(result);
-      })
-      .catch(function () {
-        elOutputStatus.textContent =
-          "サーバーに接続できませんでした。server.jsが起動しているか確認してください。";
-        elOutputStatus.className = "status-err";
-      })
-      .finally(function () { setRunning(false); });
+      },
+    });
   }
 
   // ---- イベント ----
@@ -383,18 +370,7 @@
     origShowStep(id);
   };
 
-  // ---- バックエンド表示 ----
-  fetch("/api/status")
-    .then(function (r) { return r.json(); })
-    .then(function (s) {
-      $("backend-badge").textContent =
-        s.backend === "local"
-          ? "実行環境：ローカル（" + s.rustcVersion + "）"
-          : "実行環境：Rust Playground";
-    })
-    .catch(function () {
-      $("backend-badge").textContent = "実行環境：不明（サーバー未接続）";
-    });
+  $("backend-badge").textContent = "実行環境：ブラウザ内実行（php-wasm 8.5）";
 
   // ---- 初期表示 ----
   if (steps.length === 0) {

@@ -6,7 +6,7 @@ PHPを基礎から250ステップで学べる学習Webサービス。
 ## 特徴
 
 - 25章×10ステップ=250ステップのカリキュラム（Hello Worldからクラス・例外・enum・実践パターン、よくあるエラー50選まで）
-- ブラウザ上のエディタでPHPコードを編集し、その場で構文チェック（php -l）・実行
+- ブラウザ上のエディタでPHPコードを編集し、その場で実行（php-wasm＝WebAssembly版PHP 8.5をブラウザ内で動かすため、PHPのインストールは不要）
 - Parse error・Warning・TypeErrorなどのメッセージをそのまま表示（エラーを読む訓練も学習の一部）
 - 1から書かせず、例コードの部分修正・穴埋め・意図的なエラーの修正を中心とした課題設計
 - ヒント（段階表示）、模範解答、期待出力による自動クリア判定
@@ -15,15 +15,18 @@ PHPを基礎から250ステップで学べる学習Webサービス。
 ## 必要環境
 
 - Node.js 18以上（依存パッケージなし。npm install不要）
-- PHP 8.1以上（教材はPHP 8系の機能を扱う。macOSなら`brew install php`）
+- PHP本体のインストールは不要（PHPはブラウザ内のWebAssemblyで動く）
 
 ## 使い方
 
 ```bash
 git clone https://github.com/MaitaTomoya/php-200-steps.git
 cd php-200-steps
+node scripts/setup-php-wasm.js
 node server.js
 ```
+
+`setup-php-wasm.js`はPHP実行環境（php-wasm、約17MB）を`public/vendor/`に配置する。初回だけ実行すればよい。
 
 起動するとターミナルにURLが表示されるので、ブラウザで開く（デフォルトは http://localhost:3941 ）。
 ポートは環境変数PORTで変更できる。
