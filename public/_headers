@@ -1,0 +1,7 @@
+# php-wasmの配信設定（Cloudflare Pages）
+/vendor/php-wasm/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/vendor/php-wasm/*.wasm
+  Content-Type: application/wasm
+  Cache-Control: public, max-age=31536000, immutable

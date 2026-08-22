@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>PHP教材 一括検証（php-wasm実行）</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .fail { color: #c0392b; }
+    .ok { color: #1a7f37; }
+    #summary { font-weight: bold; font-size: 18px; margin: 12px 0; }
+    pre { background: #f4f4f4; padding: 8px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>JS教材 一括検証（全ステップのsolutionをphp-wasmで実行）</h1>
+  <div id="summary">読み込み中...</div>
+  <pre id="results"></pre>
+
+  <script src="app-register.js"></script>
+  <script src="content/chapter01.js"></script>
+  <script src="content/chapter02.js"></script>
+  <script src="content/chapter03.js"></script>
+  <script src="content/chapter04.js"></script>
+  <script src="content/chapter05.js"></script>
+  <script src="content/chapter06.js"></script>
+  <script src="content/chapter07.js"></script>
+  <script src="content/chapter08.js"></script>
+  <script src="content/chapter09.js"></script>
+  <script src="content/chapter10.js"></script>
+  <script src="content/chapter11.js"></script>
+  <script src="content/chapter12.js"></script>
+  <script src="content/chapter13.js"></script>
+  <script src="content/chapter14.js"></script>
+  <script src="content/chapter15.js"></script>
+  <script src="content/chapter16.js"></script>
+  <script src="content/chapter17.js"></script>
+  <script src="content/chapter18.js"></script>
+  <script src="content/chapter19.js"></script>
+  <script src="content/chapter20.js"></script>
+  <script src="content/chapter21.js"></script>
+  <script src="content/chapter22.js"></script>
+  <script src="content/chapter23.js"></script>
+  <script src="content/chapter24.js"></script>
+  <script src="content/chapter25.js"></script>
+  <script src="php-runner.js"></script>
+  <script>
+    // 全ステップのsolutionをPhpRunnerで実行し、expectedOutputの包含を検証する
+    (async function () {
+      var steps = [];
+      (window.RUST_TUTOR_CHAPTERS || []).forEach(function (ch) {
+        (ch.steps || []).forEach(function (s) { steps.push(s); });
+      });
+      steps.sort(function (a, b) { return a.id - b.id; });
+
+      var params = new URLSearchParams(location.search);
+      var from = Number(params.get("from") || 1);
+      var to = Number(params.get("to") || 250);
+      steps = steps.filter(function (s) { return s.id >= from && s.id <= to; });
+
+      var out = document.getElementById("results");
+      var summary = document.getElementById("summary");
+      var failures = [];
+      var done = 0;
+
+      for (var i = 0; i < steps.length; i++) {
+        var step = steps[i];
+        var result = await new Promise(function (resolve) {
+          PhpRunner.run(step.solution || "", { onResult: resolve });
+        });
+
+        done++;
+        var pass = result.success &&
+          (step.expectedOutput == null || step.expectedOutput === "" ||
+            (result.stdout || "").indexOf(step.expectedOutput) !== -1);
+        if (!pass) {
+          failures.push({ id: step.id, title: step.title });
+          out.textContent += step.id + " NG: " + step.title +
+            "\n  期待: " + JSON.stringify(step.expectedOutput) +
+            "\n  成功: " + result.success + " compiler: " + JSON.stringify((result.compiler || "").slice(0, 120)) +
+            "\n  stdout: " + JSON.stringify((result.stdout || "").slice(0, 200)) +
+            "\n  stderr: " + JSON.stringify((result.stderr || "").slice(0, 200)) + "\n";
+        }
+        summary.textContent = done + "/" + steps.length + " 完了（失敗 " + failures.length + "件）";
+      }
+
+      summary.textContent = "検証完了: " + done + "件中 失敗" + failures.length + "件";
+      summary.className = failures.length ? "fail" : "ok";
+      window.__TEST_RESULT__ = { total: done, failures: failures };
+    })();
+  </script>
+</body>
+</html>

@@ -68,6 +68,31 @@
   var currentStep = null;
   var hintIndex = 0;
 
+  var introShown = false;
+
+  /** 「はじめに」ページ（言語紹介）を表示する */
+  function showIntro() {
+    var intro = window.RUST_TUTOR_INTRO;
+    if (!intro) return;
+    introShown = true;
+    currentStep = null;
+    elStepView.hidden = true;
+    elWelcome.hidden = false;
+    elWelcome.innerHTML = "";
+    var page = document.createElement("div");
+    page.className = "intro-page";
+    page.innerHTML = intro.content;
+    var btn = document.createElement("button");
+    btn.className = "primary";
+    btn.textContent = "学習を始める（ステップ1へ）";
+    btn.addEventListener("click", function () { location.hash = "#step-1"; });
+    page.appendChild(btn);
+    elWelcome.appendChild(page);
+    renderToc();
+    window.scrollTo(0, 0);
+    $("main").scrollTop = 0;
+  }
+
   // ---- エディタ（CodeMirrorが読み込めなければtextareaで動く） ----
   var textarea = $("code-editor");
   var cm = null;
@@ -123,6 +148,14 @@
 
   function renderToc() {
     elToc.innerHTML = "";
+    var intro = window.RUST_TUTOR_INTRO;
+    if (intro) {
+      var introLink = document.createElement("a");
+      introLink.href = "#intro";
+      introLink.className = "toc-intro" + (introShown ? " active" : "");
+      introLink.textContent = intro.tocTitle || "はじめに";
+      elToc.appendChild(introLink);
+    }
     chapters.forEach(function (ch) {
       var chDone = (ch.steps || []).every(function (s) { return state.done[s.id]; });
 
@@ -157,6 +190,7 @@
     var step = stepById[id];
     if (!step) return;
     currentStep = step;
+    introShown = false;
     hintIndex = 0;
     state.lastStep = id;
     saveState();
@@ -245,26 +279,13 @@
     elStdoutBlock.hidden = true;
     elStderrBlock.hidden = true;
 
-    fetch("/api/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: getCode() }),
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (result) {
-        if (result.error) {
-          elOutputStatus.textContent = result.error;
-          elOutputStatus.className = "status-err";
-          return;
-        }
+    // ブラウザ内のphp-wasm（PHP 8.5）で実行する（ローカルでもCloudflare上でも同じ挙動）
+    PhpRunner.run(getCode(), {
+      onResult: function (result) {
+        setRunning(false);
         showOutput(result);
-      })
-      .catch(function () {
-        elOutputStatus.textContent =
-          "サーバーに接続できませんでした。server.jsが起動しているか確認してください。";
-        elOutputStatus.className = "status-err";
-      })
-      .finally(function () { setRunning(false); });
+      },
+    });
   }
 
   // ---- イベント ----
@@ -335,7 +356,11 @@
 
   window.addEventListener("hashchange", function () {
     var m = location.hash.match(/^#step-(\d+)$/);
-    if (m) showStep(Number(m[1]));
+    if (m) {
+      showStep(Number(m[1]));
+    } else if (location.hash === "#intro") {
+      showIntro();
+    }
   });
 
   // ヒント表示ボタンのラベルをステップ切替時に戻す
@@ -345,18 +370,7 @@
     origShowStep(id);
   };
 
-  // ---- バックエンド表示 ----
-  fetch("/api/status")
-    .then(function (r) { return r.json(); })
-    .then(function (s) {
-      $("backend-badge").textContent =
-        s.backend === "local"
-          ? "実行環境：ローカル（" + s.rustcVersion + "）"
-          : "実行環境：Rust Playground";
-    })
-    .catch(function () {
-      $("backend-badge").textContent = "実行環境：不明（サーバー未接続）";
-    });
+  $("backend-badge").textContent = "実行環境：ブラウザ内実行（php-wasm 8.5）";
 
   // ---- 初期表示 ----
   if (steps.length === 0) {
@@ -366,9 +380,15 @@
     renderToc();
     renderProgress();
     var m = location.hash.match(/^#step-(\d+)$/);
-    var initial = m ? Number(m[1]) : state.lastStep || steps[0].id;
-    if (!stepById[initial]) initial = steps[0].id;
-    showStep(initial);
-    location.hash = "#step-" + initial;
+    if (!m && window.RUST_TUTOR_INTRO && (location.hash === "#intro" || !state.lastStep)) {
+      // 初めての利用時は「はじめに」（言語紹介）を表示する
+      showIntro();
+      location.hash = "#intro";
+    } else {
+      var initial = m ? Number(m[1]) : state.lastStep || steps[0].id;
+      if (!stepById[initial]) initial = steps[0].id;
+      showStep(initial);
+      location.hash = "#step-" + initial;
+    }
   }
 })();
